@@ -3,6 +3,14 @@ FROM maven:3.9.9-eclipse-temurin-21 AS build
 # Set the working directory in the image
 WORKDIR /app
 
+# Trust the local HTTPS inspection root used on this machine during Maven downloads.
+COPY avast-root.cer /tmp/avast-root.cer
+RUN keytool -importcert -noprompt -trustcacerts \
+    -alias avast-web-shield \
+    -file /tmp/avast-root.cer \
+    -cacerts \
+    -storepass changeit
+
 # Copy pom.xml and source code to the container
 COPY pom.xml .
 COPY src ./src
