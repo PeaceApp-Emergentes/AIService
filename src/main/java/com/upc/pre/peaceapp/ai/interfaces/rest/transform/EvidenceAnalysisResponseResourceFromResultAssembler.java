@@ -7,6 +7,8 @@ public class EvidenceAnalysisResponseResourceFromResultAssembler {
 
     public static EvidenceAnalysisResponseResource toResourceFromResult(EvidenceAnalysisResult result) {
         return new EvidenceAnalysisResponseResource(
+                result.detectedType(),
+                result.validImage(),
                 result.summary(),
                 result.observedSignals(),
                 result.requiresHumanReview(),

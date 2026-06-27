@@ -6,6 +6,8 @@ import java.util.List;
 
 @Schema(description = "Evidence analysis response")
 public record EvidenceAnalysisResponseResource(
+        String detectedType,
+        boolean validImage,
         String summary,
         List<String> observedSignals,
         boolean requiresHumanReview,

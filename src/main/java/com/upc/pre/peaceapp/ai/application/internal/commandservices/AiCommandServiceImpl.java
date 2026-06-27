@@ -32,7 +32,7 @@ public class AiCommandServiceImpl implements AiCommandService {
     public ChatbotResult handle(ChatbotCommand command) {
         if (!isClearlyInScopeChatbotMessage(command.message())) {
             log.info("Rejecting out-of-scope chatbot request");
-            return outOfScopeChatbotResult();
+            return outOfScopeChatbotResult(command.context());
         }
 
         if (!aiProperties.isMockEnabled()) {
@@ -83,14 +83,28 @@ public class AiCommandServiceImpl implements AiCommandService {
         return false;
     }
 
-    private ChatbotResult outOfScopeChatbotResult() {
-        return new ChatbotResult(
-                "Solo puedo ayudarte con temas relacionados con seguridad ciudadana, prevenci\u00f3n y reportes dentro de PeaceApp.",
-                List.of(
+    private boolean isMunicipalityContext(String context) {
+        String c = normalizeForScopeCheck(context);
+        return c.contains("municipalidad") || c.contains("municipal") || c.contains("web")
+                || c.contains("admin") || c.contains("gestion") || c.contains("tablero") || c.contains("dashboard");
+    }
+
+    private ChatbotResult outOfScopeChatbotResult(String context) {
+        List<String> suggestions = isMunicipalityContext(context)
+                ? List.of(
+                        "Filtra y prioriza reportes por urgencia, tipo o fecha",
+                        "Revisa las emergencias en tiempo real del tablero",
+                        "Marca un reporte como atendido o aprobado",
+                        "Consulta o gestiona tu suscripci\u00f3n"
+                )
+                : List.of(
                         "Describe un incidente o situaci\u00f3n de riesgo",
                         "Indica ubicaci\u00f3n, fecha y hora aproximada",
                         "Usa la opci\u00f3n de reportes si necesitas registrar un hecho"
-                ),
+                );
+        return new ChatbotResult(
+                "Solo puedo ayudarte con temas relacionados con seguridad ciudadana, prevenci\u00f3n y reportes dentro de PeaceApp.",
+                suggestions,
                 false
         );
     }
@@ -104,37 +118,49 @@ public class AiCommandServiceImpl implements AiCommandService {
 
         log.info("Generating mock incident classification");
 
+        if (!looksLikeValidIncident(command.description())) {
+            return buildIncidentClassification("GENERAL_RISK", "LOW",
+                    "La descripcion no permite identificar un incidente valido.", false);
+        }
+
         String content = safe(command.description()) + " " + safe(command.location()) + " " + safe(command.district());
         String normalized = content.toLowerCase();
 
         if (normalized.contains("robo") || normalized.contains("asalto") || normalized.contains("theft") || normalized.contains("robbery")) {
-            return buildIncidentClassification("ROBBERY", "HIGH", "Posible incidente de robo o asalto reportado.");
+            return buildIncidentClassification("ROBBERY", "HIGH", "Posible incidente de robo o asalto reportado.", true);
         }
         if (normalized.contains("acoso") || normalized.contains("harassment")) {
-            return buildIncidentClassification("HARASSMENT", "MEDIUM", "Posible incidente de acoso reportado.");
+            return buildIncidentClassification("HARASSMENT", "MEDIUM", "Posible incidente de acoso reportado.", true);
         }
         if (normalized.contains("accidente") || normalized.contains("choque") || normalized.contains("crash")) {
-            return buildIncidentClassification("ACCIDENT", "HIGH", "Posible accidente reportado.");
+            return buildIncidentClassification("ACCIDENT", "HIGH", "Posible accidente reportado.", true);
         }
 
-        return buildIncidentClassification("GENERAL_RISK", "LOW", "Incidente general pendiente de revision.");
+        return buildIncidentClassification("GENERAL_RISK", "LOW", "Incidente general pendiente de revision.", true);
     }
 
     @Override
     public EvidenceAnalysisResult handle(AnalyzeEvidenceCommand command) {
         if (!aiProperties.isMockEnabled()) {
-            log.info("Returning controlled evidence analysis response without vision");
-            return new EvidenceAnalysisResult(
-                    "Analisis visual real aun no implementado. La evidencia fue recibida y debe ser revisada por un operador.",
-                    List.of("Revision humana requerida", "Vision real pendiente de implementacion"),
-                    true,
-                    false
-            );
+            if (command.evidenceUrl() == null || command.evidenceUrl().isBlank()) {
+                return new EvidenceAnalysisResult(
+                        "NONE",
+                        false,
+                        "No se proporciono una imagen para analizar.",
+                        List.of("Adjunta una imagen de evidencia"),
+                        true,
+                        false
+                );
+            }
+            log.info("Generating OpenAI vision evidence analysis");
+            return openAiClient.analyzeEvidence(command.evidenceUrl(), command.evidenceType(), command.description());
         }
 
         log.info("Generating mock evidence analysis");
 
         return new EvidenceAnalysisResult(
+                "GENERAL_RISK",
+                true,
                 "Analisis simulado: la evidencia fue recibida y debe ser revisada por un operador antes de tomar decisiones.",
                 List.of("Evidencia disponible", "Descripcion asociada al reporte", "Revision humana recomendada"),
                 true,
@@ -142,14 +168,27 @@ public class AiCommandServiceImpl implements AiCommandService {
         );
     }
 
-    private IncidentClassificationResult buildIncidentClassification(String type, String severity, String summary) {
+    private IncidentClassificationResult buildIncidentClassification(String type, String severity, String summary, boolean valid) {
         return new IncidentClassificationResult(
                 type,
                 severity,
                 summary,
+                "",
+                "",
                 List.of("Confirmar datos del reporte", "Validar ubicacion", "Escalar si existe riesgo inmediato"),
+                valid,
                 true
         );
+    }
+
+    private boolean looksLikeValidIncident(String description) {
+        if (description == null) return false;
+        String d = description.trim();
+        if (d.length() < 5) return false;
+        long letters = d.chars().filter(Character::isLetter).count();
+        boolean hasVowel = d.toLowerCase().matches(".*[aeiouáéíóú].*");
+        boolean hasSpace = d.contains(" ");
+        return letters >= 5 && hasVowel && hasSpace;
     }
 
     private String safe(String value) {

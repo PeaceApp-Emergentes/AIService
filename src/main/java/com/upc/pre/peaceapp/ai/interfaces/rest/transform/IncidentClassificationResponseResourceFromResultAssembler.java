@@ -10,7 +10,10 @@ public class IncidentClassificationResponseResourceFromResultAssembler {
                 result.incidentType(),
                 result.severity(),
                 result.summary(),
+                result.suggestedTitle(),
+                result.suggestedDescription(),
                 result.recommendedActions(),
+                result.valid(),
                 result.mock()
         );
     }
