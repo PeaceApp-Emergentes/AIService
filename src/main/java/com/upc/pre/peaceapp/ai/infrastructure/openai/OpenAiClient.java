@@ -48,6 +48,21 @@ public class OpenAiClient {
                 zonas de riesgo, recibir alertas de proximidad, compartir ubicacion con contactos y enviar
                 alertas de emergencia (SOS). La municipalidad (web) monitorea y gestiona reportes y emergencias.
 
+                LEYENDA DEL MAPA (uso EXACTO, no inventes nada distinto a esto):
+                El COLOR e ICONO del marcador indican el TIPO de incidente:
+                - Marcador NEGRO con icono de cuchillo = ROBO.
+                - Marcador ROJO = alerta de tipo "Otro" o SOS de emergencia.
+                - Marcador MARRON con icono de carro = ACCIDENTE.
+                - Marcador ROSADO con icono de mano = ACOSO.
+                - Marcador AZUL con icono de luna = FALTA DE ILUMINACION (zona oscura).
+                El CIRCULO/ANILLO alrededor del marcador indica el ESTADO del reporte:
+                - SIN circulo = reporte normal.
+                - Circulo VERDE = reporte ya subsanado/atendido.
+                - Circulo ROJO = reporte de emergencia.
+                IMPORTANTE: el color NEGRO es por ser robo, NO significa "rechazado". El estado se lee
+                SOLO por el circulo (verde=subsanado, rojo=emergencia, sin circulo=normal). Nunca afirmes
+                que un color de pin significa rechazo u otro estado que no este en esta leyenda.
+
                 REGLAS ESTRICTAS DE ALCANCE:
                 DENTRO DEL ALCANCE: uso de PeaceApp y sus funciones, seguridad ciudadana, prevencion,
                 reportes de incidentes, zonas de riesgo, evidencia, alertas y emergencias.
